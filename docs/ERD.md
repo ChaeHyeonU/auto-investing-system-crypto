@@ -12,6 +12,7 @@ erDiagram
   USERS ||--o{ DAILY_REPORTS : "gets"
 
   SUBSCRIPTIONS ||--o{ BILLING_INVOICES : "generates"
+  SUBSCRIPTIONS ||--o{ BILLING_WEBHOOK_EVENTS : "sync_events"
   EXCHANGE_ACCOUNTS ||--o{ ORDERS : "routes"
   STRATEGIES ||--o{ ORDERS : "creates"
   ORDERS ||--o{ FILLS : "executes"
@@ -50,6 +51,14 @@ erDiagram
     string status
     timestamptz paid_at
     timestamptz created_at
+  }
+
+  BILLING_WEBHOOK_EVENTS {
+    uuid id PK
+    string stripe_event_id UK
+    string event_type
+    string processing_result
+    timestamptz processed_at
   }
 
   EXCHANGE_ACCOUNTS {
@@ -152,4 +161,3 @@ erDiagram
 1. `strategies.risk_limits`는 일손실/포지션/변동성 제한을 JSON으로 저장해 초기 유연성을 확보한다.
 2. `orders.idempotency_key`를 unique로 강제해 중복 주문을 차단한다.
 3. 민감 정보(API 키)는 암호화된 문자열만 저장하고 평문은 저장하지 않는다.
-

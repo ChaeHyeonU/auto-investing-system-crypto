@@ -40,3 +40,12 @@ class BillingInvoice(Base):
 
     subscription = relationship("Subscription", back_populates="invoices")
 
+
+class BillingWebhookEvent(Base):
+    __tablename__ = "billing_webhook_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    stripe_event_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    processing_result: Mapped[str] = mapped_column(String(20), nullable=False, default="processed")
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
