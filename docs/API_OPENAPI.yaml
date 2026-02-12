@@ -60,6 +60,19 @@ paths:
                 $ref: '#/components/schemas/AuthResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /v1/auth/mfa/setup:
+    post:
+      tags: [Auth]
+      summary: Generate or return MFA TOTP secret for current user
+      responses:
+        '200':
+          description: MFA setup information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MFASetupResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /v1/auth/mfa/verify:
     post:
       tags: [Auth]
@@ -69,11 +82,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [code]
-              properties:
-                code:
-                  type: string
+              $ref: '#/components/schemas/MFAVerifyRequest'
       responses:
         '200':
           description: MFA verified
@@ -84,6 +93,16 @@ paths:
                 properties:
                   verified:
                     type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Too many failed attempts, temporarily locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/auth/refresh:
     post:
       tags: [Auth]
@@ -418,6 +437,22 @@ components:
       required: [refresh_token]
       properties:
         refresh_token:
+          type: string
+    MFAVerifyRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 8
+    MFASetupResponse:
+      type: object
+      required: [secret, otpauth_url]
+      properties:
+        secret:
+          type: string
+        otpauth_url:
           type: string
     AuthResponse:
       type: object

@@ -11,6 +11,7 @@ erDiagram
   USERS ||--o{ ALERT_CHANNELS : "receives"
   USERS ||--o{ DAILY_REPORTS : "gets"
   USERS ||--o{ REFRESH_TOKENS : "auth"
+  USERS ||--o{ AUTH_AUDIT_LOGS : "audits"
 
   SUBSCRIPTIONS ||--o{ BILLING_INVOICES : "generates"
   EXCHANGE_ACCOUNTS ||--o{ ORDERS : "routes"
@@ -25,6 +26,9 @@ erDiagram
     string password_hash
     string role
     boolean mfa_enabled
+    string mfa_secret
+    int mfa_failed_attempts
+    timestamptz mfa_locked_until
     string status
     timestamptz created_at
     timestamptz updated_at
@@ -154,6 +158,15 @@ erDiagram
     string token_hash UK
     timestamptz expires_at
     timestamptz revoked_at
+    timestamptz created_at
+  }
+
+  AUTH_AUDIT_LOGS {
+    uuid id PK
+    uuid user_id FK
+    string event_type
+    string result
+    string detail
     timestamptz created_at
   }
 ```
