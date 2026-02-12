@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_minutes: int = 60 * 24 * 7
+    stripe_webhook_secret: str = "whsec_test"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

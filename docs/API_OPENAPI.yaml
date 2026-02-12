@@ -128,6 +128,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Subscription'
+  /v1/billing/webhooks/stripe:
+    post:
+      tags: [Billing]
+      summary: Process Stripe webhook events and sync subscription status
+      security: []
+      parameters:
+        - in: header
+          name: Stripe-Signature
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                  duplicate:
+                    type: boolean
+                  status_synced:
+                    type: boolean
+        '400':
+          description: Invalid signature or payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/exchange-accounts:
     get:
       tags: [Exchange Accounts]
@@ -441,7 +478,7 @@ components:
           $ref: '#/components/schemas/Plan'
         status:
           type: string
-          enum: [trialing, active, past_due, canceled]
+          enum: [trialing, pending_checkout, active, past_due, canceled]
         current_period_start:
           type: string
           format: date-time
