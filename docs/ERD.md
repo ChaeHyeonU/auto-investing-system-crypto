@@ -10,6 +10,7 @@ erDiagram
   USERS ||--o{ STRATEGIES : "configures"
   USERS ||--o{ ALERT_CHANNELS : "receives"
   USERS ||--o{ DAILY_REPORTS : "gets"
+  USERS ||--o{ REFRESH_TOKENS : "auth"
 
   SUBSCRIPTIONS ||--o{ BILLING_INVOICES : "generates"
   EXCHANGE_ACCOUNTS ||--o{ ORDERS : "routes"
@@ -146,10 +147,18 @@ erDiagram
     string storage_url
     timestamptz created_at
   }
+
+  REFRESH_TOKENS {
+    uuid id PK
+    uuid user_id FK
+    string token_hash UK
+    timestamptz expires_at
+    timestamptz revoked_at
+    timestamptz created_at
+  }
 ```
 
 ## 설계 메모
 1. `strategies.risk_limits`는 일손실/포지션/변동성 제한을 JSON으로 저장해 초기 유연성을 확보한다.
 2. `orders.idempotency_key`를 unique로 강제해 중복 주문을 차단한다.
 3. 민감 정보(API 키)는 암호화된 문자열만 저장하고 평문은 저장하지 않는다.
-
