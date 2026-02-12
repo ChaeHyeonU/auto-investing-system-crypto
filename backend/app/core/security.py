@@ -1,4 +1,6 @@
+import hashlib
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -19,7 +21,13 @@ def get_password_hash(password: str) -> str:
 def create_token(subject: str, expires_minutes: int, token_type: str) -> str:
     now = datetime.now(tz=timezone.utc)
     expire = now + timedelta(minutes=expires_minutes)
-    payload = {"sub": subject, "type": token_type, "iat": int(now.timestamp()), "exp": int(expire.timestamp())}
+    payload = {
+        "sub": subject,
+        "type": token_type,
+        "jti": str(uuid4()),
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
+    }
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
@@ -28,3 +36,7 @@ def decode_token(token: str) -> dict[str, object]:
         return jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
     except JWTError as exc:
         raise ValueError("invalid token") from exc
+
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

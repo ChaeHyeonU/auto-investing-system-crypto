@@ -22,4 +22,4 @@ class User(Base):
     )
 
     subscriptions = relationship("Subscription", back_populates="user", cascade="all, delete-orphan")
-
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")

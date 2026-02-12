@@ -84,6 +84,26 @@ paths:
                 properties:
                   verified:
                     type: boolean
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate refresh token and issue new token pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token rotated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /v1/billing/checkout-session:
     post:
       tags: [Billing]
@@ -392,6 +412,12 @@ components:
           type: string
           format: email
         password:
+          type: string
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
           type: string
     AuthResponse:
       type: object
