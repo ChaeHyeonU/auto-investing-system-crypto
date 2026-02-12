@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.base import Base
 from app.db.session import get_db
+from app.core.totp import generate_totp
 from app.main import app
+from app.models.audit import AuthAuditLog
 from app.models.auth import RefreshToken
+from app.models.user import User
 
 
 TEST_DATABASE_URL = "sqlite:///./test_auto_investing.db"
@@ -97,3 +100,89 @@ def test_refresh_token_rotation() -> None:
 
     second_refresh_response = client.post("/v1/auth/refresh", json={"refresh_token": new_refresh})
     assert second_refresh_response.status_code == 200
+
+
+def test_mfa_verify_success_and_audit_log() -> None:
+    client = TestClient(app)
+    email = "mfa-success@example.com"
+    password = "password123"
+
+    register_response = client.post("/v1/auth/register", json={"email": email, "password": password})
+    assert register_response.status_code == 201
+    access_token = register_response.json()["access_token"]
+
+    setup_response = client.post("/v1/auth/mfa/setup", headers={"Authorization": f"Bearer {access_token}"})
+    assert setup_response.status_code == 200
+    secret = setup_response.json()["secret"]
+    assert setup_response.json()["otpauth_url"]
+
+    code = generate_totp(secret)
+    verify_response = client.post(
+        "/v1/auth/mfa/verify",
+        json={"code": code},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert verify_response.status_code == 200
+    assert verify_response.json()["verified"] is True
+
+    db = TestingSessionLocal()
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        assert user is not None
+        assert user.mfa_enabled is True
+
+        audit_success = (
+            db.query(AuthAuditLog)
+            .filter(AuthAuditLog.user_id == user.id, AuthAuditLog.event_type == "mfa_verify", AuthAuditLog.result == "success")
+            .first()
+        )
+        assert audit_success is not None
+    finally:
+        db.close()
+
+
+def test_mfa_failure_limit_and_lock() -> None:
+    client = TestClient(app)
+    email = "mfa-fail-limit@example.com"
+    password = "password123"
+
+    register_response = client.post("/v1/auth/register", json={"email": email, "password": password})
+    assert register_response.status_code == 201
+    access_token = register_response.json()["access_token"]
+
+    setup_response = client.post("/v1/auth/mfa/setup", headers={"Authorization": f"Bearer {access_token}"})
+    assert setup_response.status_code == 200
+
+    for attempt in range(1, 6):
+        response = client.post(
+            "/v1/auth/mfa/verify",
+            json={"code": "000000"},
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        if attempt < 5:
+            assert response.status_code == 401
+        else:
+            assert response.status_code == 429
+
+    locked_response = client.post(
+        "/v1/auth/mfa/verify",
+        json={"code": "000000"},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert locked_response.status_code == 429
+
+    db = TestingSessionLocal()
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        assert user is not None
+        assert user.mfa_failed_attempts >= 5
+        assert user.mfa_locked_until is not None
+
+        failure_logs = (
+            db.query(AuthAuditLog)
+            .filter(AuthAuditLog.user_id == user.id, AuthAuditLog.event_type == "mfa_verify")
+            .count()
+        )
+        assert failure_logs >= 5
+    finally:
+        db.close()
