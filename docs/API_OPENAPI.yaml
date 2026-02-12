@@ -111,6 +111,12 @@ paths:
                     format: uri
                   session_id:
                     type: string
+        '502':
+          description: Stripe provider error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/billing/subscription:
     get:
       tags: [Billing]
